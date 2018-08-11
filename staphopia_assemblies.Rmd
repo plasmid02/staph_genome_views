@@ -1,0 +1,79 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Cmd+Shift+Enter*. 
+
+```{r}
+library(staphopia)
+```
+
+Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Cmd+Option+I*.
+
+```{r}
+public <- get_public_samples()
+
+```
+
+```{r}
+gold_samps <- public %>% filter(rank == 3)
+contigs <- get_assembly_stats(gold_samps$sample_id)
+
+```
+
+```{r}
+m <- mean(contigs$total_contig_length)
+sd <- sd(contigs$total_contig_length)
+big_assms <- contigs %>% filter(total_contig_length > m+(3*sd))
+```
+
+How does the proportion of small assemblies vary by contig length?
+
+```{r}
+p <- ggplot(contigs, aes(x= total_contig_length, y = percent_contigs_greater_1k)) + geom_point()
+p 
+```
+
+Note the hard line at about 2.7 Mbp?
+Also the group of strains with total_length greater than ~ 2.8Mbp but %contigs less than 10%
+Interesting set of strains seem to all have genomes of ~ 1.8 Mbp.
+
+Start with the small ones
+```{r}
+under2Mb <- contigs %>% filter(total_contig_length < 2000000) %>%
+  select(sample_id)
+under2Mb_meta <- get_metadata(under2Mb$sample_id)
+under2Mb_info <- get_samples(under2Mb$sample_id)
+```
+
+These are all from Sanger, all ST '0'.  My guess, some sort of contaminant.
+
+```{r}
+hist(contigs$total_contig_length, breaks= 500)
+```
+
+Interesting set of peaks, especially the one over 3,000,000
+
+```{r}
+merged_tables <- inner_join(contigs,public, by = "sample_id")
+```
+
+```{r}
+filter(merged_tables,total_contig_length > 3000000) %>%
+  select(st) %>%
+  table()
+```
+Strikingly, a lot of these large genomes are ST239
+
+```{r}
+filter(merged_tables,total_contig_length < 2630000) %>%
+  select(st) %>%
+  table()
+```
+
+As expected?  Check that these maybe have other S. aureus STs?
+
+
