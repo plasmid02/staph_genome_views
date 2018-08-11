@@ -1,17 +1,16 @@
 ---
-title: "R Notebook"
+title: "Staph genome size distribuiton"
 output: html_notebook
 ---
 
-This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
 
-Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Cmd+Shift+Enter*. 
 
 ```{r}
 library(staphopia)
+library(dplyr)
+library(ggplot2)
 ```
 
-Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Cmd+Option+I*.
 
 ```{r}
 public <- get_public_samples()
@@ -25,9 +24,8 @@ contigs <- get_assembly_stats(gold_samps$sample_id)
 ```
 
 ```{r}
-m <- mean(contigs$total_contig_length)
-sd <- sd(contigs$total_contig_length)
-big_assms <- contigs %>% filter(total_contig_length > m+(3*sd))
+mean(contigs$total_contig_length)
+sd(contigs$total_contig_length)
 ```
 
 How does the proportion of small assemblies vary by contig length?
@@ -75,5 +73,13 @@ filter(merged_tables,total_contig_length < 2630000) %>%
 ```
 
 As expected?  Check that these maybe have other S. aureus STs?
+Get a list of gold St=0 and look st the cgmlst profiles
+```{r}
+gold_st0 <- filter(gold_samps,st == 0)
+gold_st0_cgmlst <- get_cgmlst(gold_st0$sample_id)
+```
 
+```{r}
+session_info()
+```
 
