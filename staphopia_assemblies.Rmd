@@ -63,26 +63,19 @@ filter(merged_tables,total_contig_length < 2630000) %>%
   table()
 ```
 
-As expected?  Check that these maybe have other S. aureus STs?
-Get a list of gold St=0 and look st the cgmlst profiles
-```{r}
-gold_st0 <- filter(gold_samps,st == 0)
-gold_st0_cgmlst <- get_cgmlst(gold_st0$sample_id)
-```
-How many alleles are missing?
-
-```{r}
-rowSums(gold_st0_cgmlst == 0)
-rowSums(is.na(gold_st0_cgmlst))
-```
-
-No missing alleles?
 
 ```{r}
 p <- ggplot(merged_tables,aes(x=total_contig_length, color = (st==239))) + geom_histogram(binwidth=10000) 
 p
 ```
 Interesting set of peaks, especially the one over 3,000,000, which is mostly ST239
+
+
+```{r}
+p <- ggplot(merged_tables,aes(x=total_contig_length, color = (st==0))) + geom_histogram(binwidth=10000) 
+p
+```
+
 
 ```{r}
 table(cut(contigs$total_contig_length, breaks = 100))
@@ -126,12 +119,43 @@ table(over3.11_large$st)
  
  ## t-tests using dplyr
 ```{r}
-merged_tables %>% group_by(st239 = st == 239) %>% 
-  summarise(list(total_contig_length)) %>% 
-  mutate(p.value = t.test(st239)$p.value)
+all_conlens <- merged_tables$total_contig_length
+pvals <- merged_tables %>% 
+  group_by(st) %>% 
+  summarise(conlens = list(total_contig_length), mean_con_length = mean(total_contig_length), sd_contig_length = sd(total_contig_length)) %>% 
+  filter(lengths(conlens) > 100) %>%
+  rowwise() %>%
+  mutate(p_value = t.test(unlist(conlens), !(all_conlens %in% unlist(conlens)))$p.value) 
+  
 ```
  
- 
+ ## cgMLST
+Check that these maybe have other S. aureus STs?
+Get a list of gold St=0 and look st the cgmlst profiles
+
+```{r}
+gold_st0 <- filter(gold_samps,st == 0)
+gold_st0_cgmlst <- get_cgmlst(gold_st0$sample_id)
+```
+How many alleles are missing?
+
+```{r}
+rowSums(gold_st0_cgmlst == 0)
+rowSums(is.na(gold_st0_cgmlst))
+```
+
+This suggest no missing alleles but maybe this reflects the way null calls are counted in mentalist?
+
+Now see if all the small genomes are similar to each other
+
+```{r}
+under_2.63Mb_cgmlt <- filter(gold_st0_cgmlst,sample_id %in% under2.63Mb$sample_id)
+under2.63Mb_cgmlst_distance <- cgmlst_distance(under_2.63Mb_cgmlt)
+```
+```{r}
+plot(hclust(as.dist(under2.63Mb_cgmlst_distance)), cex = 0.3)
+```
+
 
 ## QUESTIONS TODO
 1. Detailed analysis of small and large genomes.  Are they associated with particular clades?
