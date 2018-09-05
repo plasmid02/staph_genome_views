@@ -8,6 +8,7 @@ library(staphopia)
 library(dplyr)
 library(ggplot2)
 library(feather)
+library(tidyr)
 ```
 
 
@@ -20,13 +21,13 @@ contigs <- get_assembly_stats(gold_samps$sample_id)
 #### plasmids
  (local path will vary) These ae lists of contigs called as plasmid by SPAdes baed on coverage and other metrics
 ```{r}
-plas_table <- read_feather("~/Downloads/staphopia-plasmids.feather") %>%
+plas_table <- read_feather("/Volumes/DATA_2TB/Dropbox/Staphopia_resources/staph_genome_views/staphopia-plasmids.feather") %>%
   group_by(sample_id) %>% summarise(plasmid_len = sum(length),plas_contigs = n())
 ```
 
 #### create useful merged gold data table
 ```{r}
-merged_tables <- inner_join(contigs,public, by = "sample_id") %>%
+merged_tables <- inner_join(contigs,gold_samps, by = "sample_id") %>%
   select(sample_id,st,total_contig,total_contig_length,percent_contigs_greater_1k,l50_contig_count,n50_contig_length)
 gold_summary <-inner_join(merged_tables,plas_table,by="sample_id")
 ```
@@ -170,6 +171,27 @@ under2.63Mb_cgmlst_distance <- cgmlst_distance(under_2.63Mb_cgmlt)
 ```{r}
 plot(hclust(as.dist(under2.63Mb_cgmlst_distance)), cex = 0.3)
 ```
+## Short genomes Blast analysis
+
+1. Download all contigs of genomes in the under 2.36 Mb
+2. Blast against USA300 FPR
+  
+  blastn -query short_staph.fasta -task "megablast" -outfmt 6 -o short_staph_vs_FPR.results -db   /Volumes/DATA_2TB/Dropbox/Staphopia_resources/genoplotR_genomes/USA300_FPR3757.gbk.fna
+
+3. Filter for top hits 
+
+awk '! a[$1]++' short_staph_vs_FPR.results | sed 's/|/ /g' >  short_staph_vs_FPR.results_best_hits
+
+
+```{r}
+short_genome_blast <- read.table("/Users/timothyread/Documents/short_staph/short_staph_vs_FPR.results_best_hits",header = F, stringsAsFactors = F)
+short_genome_blast %>% group_by(V1) %>%
+  summarise(total_hit_len = sum(V6)) %>%
+  filter(total_hit_len > 1500000)
+```
+In other words , only 17745 looks like it might be Staph aureus.  It actually has a ST type - ST225.  The others - probably not S. aureus.  This is why we need mash.
+
+## PLASMIDS
 
 ```{r}
 p <- ggplot(gold_summary,aes(x=plasmid_len)) + geom_histogram(binwidth=100000) 
